@@ -1,0 +1,13 @@
+Flask
+werkzeug
+os
+threading
+nest_asyncio
+pandas
+pdfplumber
+tabula-py
+re
+collections
+PyMuPDF
+logging
+numpy
