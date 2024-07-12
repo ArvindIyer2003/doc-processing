@@ -246,11 +246,11 @@
             const numFiles = document.getElementById('files').files.length;
             let processingTime;
             if (folderTypeSelect.value === 'adeo') {
-                processingTime = 9000 * numFiles;
+                processingTime = "Processing...";
             } else if (folderTypeSelect.value === 'obi') {
-                processingTime = 5000 * numFiles;
+                processingTime = "Processing...";
             } else {
-                processingTime = 8000 * numFiles;
+                processingTime = "Processing...";
             }
 
             showProcessingTimePopup(processingTime);
@@ -291,7 +291,7 @@
         };
 
         function showProcessingTimePopup(processingTime) {
-            processingTimeInfo.textContent = `Estimated processing time: ${processingTime / 1000} seconds`;
+            processingTimeInfo.textContent = `Processing...`;
             processingTimePopup.classList.add('active');
         }
 
