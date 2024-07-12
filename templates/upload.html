@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Folders</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #3f729b;
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+            color: #444;
+            display: block;
+            margin-bottom: 8px;
+        }
+        select, input[type="file"], input[type="submit"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: #f7f7f7;
+            color: #333;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input[type="file"] {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        input[type="submit"] {
+            background-color: #3f729b;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #2a5170;
+        }
+        #customer_name_input {
+            display: none;
+            margin-top: 10px;
+        }
+        .uploading-text {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+            display: none;
+        }
+        #result {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .error-message {
+            color: #c00;
+            margin-top: 10px;
+        }
+        /* Processing time popup styles */
+        .processing-time-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .processing-time-popup.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .processing-time-popup-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            max-width: 80%;
+        }
+        .processing-time-popup-content p {
+            margin: 0;
+            color: #333;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        .processing-time-popup-content .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        .password-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .password-input {
+            width: calc(100% - 40px); /* Adjust width as needed */
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #fff;
+            color: #333;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            padding-right: 40px;
+        }
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+        }
+        .password-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: #666;
+            transition: fill 0.3s;
+        }
+        .password-toggle:hover svg {
+            fill: #3f729b;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Upload Folders</h2>
+        <form action="{{ url_for('upload_folder') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+            <label for="folder_type">Select Folder Type:</label>
+            <select id="folder_type" name="folder_type">
+                <option value="adeo">ADEO</option>
+                <option value="obi">OBI</option>
+                <option value="CAMS">CAMS</option>
+                <option value="KFINTECH">KFINTECH</option>
+            </select>
+            <br>
+            <label for="files">Choose Files:</label>
+            <input type="file" id="files" name="files[]" multiple>
+            
+            <!-- Password field specifically for CAMS and KFINTECH -->
+            <div class="password-container" id="password_block" style="display: none;">
+                <label for="password">Enter Password:</label>
+                <div style="position: relative;">
+                    <input type="password" id="password" name="password" class="password-input">
+                    <span class="password-toggle" onclick="togglePasswordVisibility()">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm1-6c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1z"/></svg>
+                    </span>
+                </div>
+            </div>
+
+            <div id="customer_name_input">
+                <label for="customer_name">Customer Name (OBI only):</label>
+                <select id="customer_name" name="customer_name">
+                    <option value="OBI-Lux Tools">OBI-Lux Tools</option>
+                    <option value="OBI-Poland">OBI-Poland</option>
+                    <option value="OBI-Euromate">OBI-Euromate</option>
+                    <option value="OBI-Group Sourcing Hong Kong">OBI-Group Sourcing Hong Kong</option>
+                    <option value="OBI-CZECH Republic">OBI-CZECH Republic</option>
+                    <option value="OBI-RUSSIA">OBI-RUSSIA</option>
+                    <option value="OBI-Superhobby">OBI-Superhobby</option>
+                    <option value="OBI-Italy">OBI-Italy</option>
+                    <option value="OBI-Euromate GMBH">OBI-Euromate GMBH</option>
+                    <option value="OBI-EMIL LUX GMBH">OBI-EMIL LUX GMBH</option>
+                </select>
+            </div>
+            <br>
+            <input type="submit" value="Upload">
+            <div class="uploading-text" id="uploadingText">Uploading files...</div>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <!-- Processing time popup -->
+    <div class="processing-time-popup" id="processingTimePopup">
+        <div class="processing-time-popup-content">
+            <p id="processingTimeInfo">Calculating processing time...</p>
+            <div class="loader"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const folderTypeSelect = document.getElementById('folder_type');
+        const customerNameInput = document.getElementById('customer_name_input');
+        const uploadingText = document.getElementById('uploadingText');
+        const resultDiv = document.getElementById('result');
+        const processingTimePopup = document.getElementById('processingTimePopup');
+        const processingTimeInfo = document.getElementById('processingTimeInfo');
+        const passwordBlock = document.getElementById('password_block');
+
+        folderTypeSelect.addEventListener('change', function() {
+            if (folderTypeSelect.value === 'obi') {
+                customerNameInput.style.display = 'block';
+                passwordBlock.style.display = 'none'; // Hide password block for OBI
+            } else if (folderTypeSelect.value === 'CAMS' || folderTypeSelect.value === 'KFINTECH') {
+                customerNameInput.style.display = 'none';
+                passwordBlock.style.display = 'block'; // Show password block for CAMS and KFINTECH
+            } else {
+                customerNameInput.style.display = 'none';
+                passwordBlock.style.display = 'none';
+            }
+        });
+
+        form.onsubmit = async (event) => {
+            event.preventDefault();
+            resultDiv.innerHTML = ''; // Clear previous results
+            const formData = new FormData(form);
+            const numFiles = document.getElementById('files').files.length;
+            let processingTime;
+            if (folderTypeSelect.value === 'adeo') {
+                processingTime = 9000 * numFiles;
+            } else if (folderTypeSelect.value === 'obi') {
+                processingTime = 5000 * numFiles;
+            } else {
+                processingTime = 8000 * numFiles;
+            }
+
+            showProcessingTimePopup(processingTime);
+
+            setTimeout(async () => {
+                uploadingText.style.display = 'block';
+                const response = await fetch('{{ url_for("upload_folder") }}', {
+                    method: 'POST',
+                    body: formData,
+                });
+                uploadingText.style.display = 'none';
+                hideProcessingTimePopup();
+                const result = await response.json();
+                if (result.message) {
+                    const p = document.createElement('p');
+                    p.textContent = result.message;
+                    resultDiv.appendChild(p);
+                }
+                if (result.download_url) {
+                    const a = document.createElement('a');
+                    a.href = result.download_url;
+                    a.textContent = 'Download Combined Excel';
+                    resultDiv.appendChild(a);
+                    resultDiv.appendChild(document.createElement('br'));
+                }
+                if (result.error_files && result.error_files.length) {
+                    const p = document.createElement('p');
+                    p.textContent = 'Files with errors:';
+                    resultDiv.appendChild(p);
+                    result.error_files.forEach(file => {
+                        const errorP = document.createElement('p');
+                        errorP.textContent = file;
+                        errorP.className = 'error-message';
+                        resultDiv.appendChild(errorP);
+                    });
+                }
+            }, processingTime);
+        };
+
+        function showProcessingTimePopup(processingTime) {
+            processingTimeInfo.textContent = `Estimated processing time: ${processingTime / 1000} seconds`;
+            processingTimePopup.classList.add('active');
+        }
+
+        function hideProcessingTimePopup() {
+            processingTimePopup.classList.remove('active');
+        }
+        function togglePasswordVisibility() {
+            const passwordField = document.getElementById('password');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+            } else {
+                passwordField.type = 'password';
+            }
+        }
+    </script>
+</body>
+</html>
